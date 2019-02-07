@@ -38,6 +38,13 @@ app.post('/add-team-member',function(req,res){
         res.send("add member success")
     });
 })
+app.post('/update-creator-location',function(req,res){
+    console.log("update-creator-location...");
+    Team.updateCreatorLocation(req.body.token, req.body.location,function () {
+        res.send("update-creator-location success")
+    });
+})
+
 
 
 
