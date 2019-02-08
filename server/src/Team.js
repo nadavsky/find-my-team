@@ -13,12 +13,15 @@ var Team = module.exports = {
                 console.log("token: " + token)
                 var team = { name: name, creator:creator , token:token, members:{}};
                 var db = client.db("general");
-
                 db.collection("teams").insertOne(team, function(err, res) {
                     if (err) throw err;
                     console.log("team '" + name + "' added");
                     client.close();
-                    cb(token)
+                    this.addMember(token,name,creator,()=>{
+                        consule.log(`creator '${creator}' added as a member to his team.`)
+                        cb(token)
+                    })
+
                 });
             })
         }
@@ -47,7 +50,7 @@ var Team = module.exports = {
     },
     updateCreatorLocation: function(teamToken, location, cb){
         console.log(`update Creator Location...`)
-        if(Team.isTeamExist(teamToken) ){
+        if(Team.isTeamExist(teamToken)){
             var teamName;
             MongoClient.connect('mongodb://localhost:27017/', { useNewUrlParser: true },function (err, client) {
                 if (err) throw err;
@@ -66,6 +69,27 @@ var Team = module.exports = {
         }
         else return "team is not exist or member already exist"
     },
+    updateLocation: function(teamToken,memberName, location, cb){  //todo: update all function to work like this, first of all get doc from redis then work with it indie the memory.
+        this.getRelevantDocFromMongo({teamToken:teamToken},(doc)=>{
+            console.log(`update  Location...`);
+            if(Team.isTeamExist(doc) && Team.isMemberExist(doc,memberName) ){
+                var teamName;
+                if(Team.isCreator(doc,teamToken,memberName) ) {
+                    consule.log("update creator location...")
+                    updateCreatorLocation(teamToken, location, cb)
+                }
+                else{
+                    if(outSideTheArea(location)){
+                        doc=addMemberToOutList(doc,memberName);
+                    }
+
+                }
+                return cb(doc.outList)
+            }
+            else return "team or member is not exist"
+        })
+
+    },
     generateToken: function(){
         return randtoken.generate(8);
     },
@@ -75,11 +99,20 @@ var Team = module.exports = {
     isValidMail: function (mail) {
         return true
     },
-    isTeamExist: function (teamToken) {
-        return true
+    isTeamExist: function (doc) {
+        return doc && doc.teamToken
     },
-    isMemberExist: function (memberName) {
-        return false
+    isMemberExist: function (doc,memberName) {
+        return doc && doc.members.memberName
+    },
+    getRelevantDocFromMongo(filter,cb){
+        MongoClient.connect('mongodb://localhost:27017/', { useNewUrlParser: true },function (err, client) {
+            if (err) throw err;
+            var col = client.db("general").collection('teams');
+            col.findOne(filter,(err,res)=>{
+                cb(res)
+            });
+        })
     }
 
 
