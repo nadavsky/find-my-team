@@ -28,7 +28,7 @@ app.get('/join-team-page',function(req,res){
 
 app.post('/create-team',function(req,res){
         console.log("create-team...");
-        Team.create(req.body.name, req.body.mail,function (token) {
+        Team.create(req.body.name,req.body.creatorName , req.body.mail,true,function (token) {
             res.send("'add team' success, team token = " + token)
         });
 })
