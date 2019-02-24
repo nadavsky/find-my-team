@@ -2,6 +2,7 @@
 
 var randtoken = require('rand-token'),
     MongoClient = require('mongodb').MongoClient;
+var geolib =require("geolib");
 
 
 var Team = module.exports = {
@@ -11,7 +12,7 @@ var Team = module.exports = {
                 if (err) throw err;
                 var token= Team.generateToken()
                 console.log("token: " + token)
-                var team = { name: teamName, creator:creator , token:token, members:{}};
+                var team = { name: teamName, creator:creator , token:token,outList:[], members:{}};
                 var db = client.db("general");
                 db.collection("teams").insertOne(team, function(err, res) {
                     if (err) throw err;
@@ -47,7 +48,7 @@ var Team = module.exports = {
                         if (err) throw err;
                         console.log("member '" + memberName + "' added");
                         client.close();
-                        cb()
+                        cb(creator? teamToken: "member '" + memberName + "' added")
                     })
                 })
             } else return cb("team is not exist or member already exist")
@@ -61,26 +62,26 @@ var Team = module.exports = {
                 if (err) throw err;
                 console.log(`location was updated`);
                 client.close();
-                cb(res.outList)
+                //cb(err || "Creator location was updated");
             })
         })
     },
     updateLocation: function(teamToken,memberName, location, cb){  //todo: update all function to work like this, first of all get doc from redis then work with it indie the memory.
         Team.getRelevantDocFromMongo({token:teamToken},(doc)=>{
             console.log(`update  Location...`);
-            if(Team.isTeamExist(doc) && Team.isMemberExist(doc,memberName) ){
+            if(Team.isTeamExist(doc,teamToken) && Team.isMemberExist(doc,memberName) ){
                 var teamName;
-                if(Team.isCreator(doc,teamToken,memberName) ) {
-                    consule.log("update creator location...")
-                    Team.updateCreatorLocation(teamToken, location, cb)
+                if(Team.isCreator(doc,memberName) ) {
+                    console.log("update creator location...")
+                    Team.updateCreatorLocation(teamToken, location)
                 }
                 else{
-                    if(outSideTheArea(location)){
-                        doc=addMemberToOutList(doc,memberName);
+                    if(Team.outSideTheArea(doc,location)){
+                        doc=Team.addMemberToOutList(doc,memberName); //async upadte the list but sync return the current list state.
                     }
 
                 }
-                return cb(doc.outList)
+                return cb(doc.outList) //return out list to everyone...
             }
             else return cb("team or member is not exist")
         })
@@ -99,7 +100,10 @@ var Team = module.exports = {
         return doc && doc.token==teamToken
     },
     isMemberExist: function (doc,memberName) {
-        return doc && doc.members[memberName]
+        return doc && doc.members[memberName] && true
+    },
+    isCreator: function(doc, memberName){
+        return doc.members[memberName].creator;
     },
     getRelevantDocFromMongo(filter,cbFunc) {
         console.log("getRelevantDocFromMongo....")
@@ -118,5 +122,37 @@ var Team = module.exports = {
 
          })
 
+    },
+    outSideTheArea: function (doc, location) {
+
+            //{latitude: 51.5103, longitude: 7.49347},
+            //{latitude: "51° 31' N", longitude: "7° 28' E"}
+        console.log("in outSideTheArea....")
+
+        return geolib.getDistanceSimple(eval('(' + location + ')'),eval('(' + doc.location + ')')) > 20;
+    },
+    addMemberToOutList: function (doc,memberName) {
+        if (!doc.outList.includes(memberName)){
+            doc.outList.push(memberName);
+            MongoClient.connect('mongodb://localhost:27017/', {useNewUrlParser: true}, function (err, client) {
+                if (err) throw err;
+                var col = client.db("general").collection('teams');
+
+                var outList = doc.outList.push(memberName)
+                col.update({token: doc.token}, {
+                    $set: {
+                        [outList]: doc.outList
+                    }
+                }, {}, function (err, res) {
+                    if (err) throw err;
+                    console.log("out list of team" + doc.token + " was updated with  " + memberName)
+                    client.close();
+                })
+
+            })
+
+            return doc;
+        }
+        return doc;
     }
 }

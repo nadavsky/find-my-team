@@ -34,8 +34,8 @@ app.post('/create-team',function(req,res){
 })
 app.post('/add-team-member',function(req,res){
     console.log("add-team-member...");
-    Team.addMember(req.body.token, req.body.name, req.body.mail,function () {
-        res.send("add member success")
+    Team.addMember(req.body.token, req.body.name, req.body.mail,null,function (err) {
+        res.send(err || "add member success")
     });
 })
 app.post('/update-location',function(req,res){
