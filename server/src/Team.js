@@ -76,8 +76,12 @@ var Team = module.exports = {
                     Team.updateCreatorLocation(teamToken, location)
                 }
                 else{
-                    if(Team.outSideTheArea(doc,location)){
+                    if(Team.outSideTheArea(doc,location) ){
+                        console.log(memberName + " is outSideTheArea")
                         doc=Team.addMemberToOutList(doc,memberName); //async upadte the list but sync return the current list state.
+                    }
+                    else if(doc.outList.indexOf(memberName) !== -1){
+                        doc=Team.removeMemberFromOutList(doc,memberName)
                     }
 
                 }
@@ -132,16 +136,15 @@ var Team = module.exports = {
         return geolib.getDistanceSimple(eval('(' + location + ')'),eval('(' + doc.location + ')')) > 20;
     },
     addMemberToOutList: function (doc,memberName) {
-        if (!doc.outList.includes(memberName)){
+        if (doc.outList.indexOf(memberName) == -1){
+            console.log(memberName + " is not in the list...")
             doc.outList.push(memberName);
             MongoClient.connect('mongodb://localhost:27017/', {useNewUrlParser: true}, function (err, client) {
                 if (err) throw err;
                 var col = client.db("general").collection('teams');
-
-                var outList = doc.outList.push(memberName)
                 col.update({token: doc.token}, {
                     $set: {
-                        [outList]: doc.outList
+                        ["outList"]: doc.outList
                     }
                 }, {}, function (err, res) {
                     if (err) throw err;
@@ -150,9 +153,28 @@ var Team = module.exports = {
                 })
 
             })
-
-            return doc;
         }
+        return doc;
+    },
+    removeMemberFromOutList: function (doc,memberName) {
+        var index = doc.outList.indexOf(memberName);
+        if (index !== -1) doc.outList.splice(index, 1);
+        MongoClient.connect('mongodb://localhost:27017/', {useNewUrlParser: true}, function (err, client) {
+            if (err) throw err;
+            var col = client.db("general").collection('teams');
+
+            col.update({token: doc.token}, {
+                $set: {
+                    ["outList"]: doc.outList
+                }
+            }, {}, function (err, res) {
+                if (err) throw err;
+                console.log("out list of team" + doc.token + " was updated with remove  " + memberName)
+                client.close();
+            })
+
+        })
+
         return doc;
     }
 }
