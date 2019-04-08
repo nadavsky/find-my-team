@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Team-Page</title>
+    <h2>Team-Page</h2>
+    <script>
+        window.onload = function() {
+            var url_string = window.location.href
+            var url = new URL(url_string);
+            var token = url.searchParams.get("teamToken")
+            var name = url.searchParams.get("member")
+
+            if (navigator.geolocation) {
+                console.log('Geolocation is supported!');
+            }
+            else {
+                console.log('Geolocation is not supported for this Browser/OS.');
+            }
+            var startPos;
+            var geoOptions = {
+                timeout: 10 * 1000
+            }
+
+            var geoSuccess = function(position) {
+                startPos = position;
+                document.getElementById('startLat').innerHTML = startPos.coords.latitude || "no position error";
+                document.getElementById('startLon').innerHTML = startPos.coords.longitude;
+                document.getElementById('log').innerHTML = logMessages;
+
+                var xhttp = new XMLHttpRequest()
+                xhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("outList").innerHTML = "team members out of area: \n" + this.responseText;
+                    }
+                };
+                xhttp.open("POST","./update-location")
+                xhttp.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+                var latitude = toString(startPos.coords.latitude).substring(0,10)
+                var longitude = toString(startPos.coords.longitude).substring(0,10)
+                var position=JSON.stringify({'e': latitude , 'w': longitude})
+                xhttp.send(JSON.stringify({ token: token, name : name, location:position}));
+            };
+            var geoError = function(error) {
+                console.log('Error occurred. Error code: ' + error.code);
+                // error.code can be:
+                //   0: unknown error
+                //   1: permission denied
+                //   2: position unavailable (error response from location provider)
+                //   3: timed out
+            };
+
+            function updateLocation(){
+                navigator.geolocation.getCurrentPosition(geoSuccess, geoError, geoOptions);
+
+                setTimeout(updateLocation,5000)
+            }
+
+            updateLocation();
+
+
+            var logBackup = console.log;
+            var logMessages = [];
+
+            console.log = function() {
+                logMessages.push.apply(logMessages, arguments);
+                logBackup.apply(console, arguments);
+            };
+
+        };
+    </script>
+</head>
+<body>
+<div id="startLat"></div>
+<div id="startLon"></div>
+<div id="outList"></div>
+<div id="log"></div>
+
+</body>
+</html>

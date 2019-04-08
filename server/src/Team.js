@@ -68,7 +68,7 @@ var Team = module.exports = {
     },
     updateLocation: function(teamToken,memberName, location, cb){  //todo: update all function to work like this, first of all get doc from redis then work with it indie the memory.
         Team.getRelevantDocFromMongo({token:teamToken},(doc)=>{
-            console.log(`update  Location...`);
+            console.log(`update  Location... token = ${teamToken}`);
             if(Team.isTeamExist(doc,teamToken) && Team.isMemberExist(doc,memberName) ){
                 var teamName;
                 if(Team.isCreator(doc,memberName) ) {
@@ -128,7 +128,8 @@ var Team = module.exports = {
 
     },
     outSideTheArea: function (doc, location) {
-
+        console.log(JSON.stringify(doc.location))
+        console.log(JSON.stringify(location))
             //{latitude: 51.5103, longitude: 7.49347},
             //{latitude: "51° 31' N", longitude: "7° 28' E"}
         console.log("in outSideTheArea....")

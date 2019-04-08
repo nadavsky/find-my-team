@@ -2,10 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Join-Team</title>
+    <title>Join-Team Page</title>
     <h2>Join Team</h2>
+    <script>
+        function joinTeam(e){
+            var token = document.getElementById("tokenVal").value;
+            var member = document.getElementById("name").value;
+            window.location=`./team-page?teamToken=${token}&member=${member}`
+        }
+    </script>
 </head>
 <body>
+Name :<br>
+<input id="name" type="text"><br><br>
+Team token to join:<br>
+<input id="tokenVal" type="text" name="teamToken">              <button onclick="joinTeam()">Join</button><br><br>
 
 </body>
 </html>
